@@ -6,6 +6,8 @@ implementing AVOUM on Cardano.
 * [Background](#background)
 * [Summary](#Summary)
 * [Protocol and Interface Modifications](#Protocol-and-Interface-Modifications)
+  * [Malleable Transaction Submission API](#Malleable-Transaction-Submission-API)
+  * [Rebase Script Execution Environment](#Rebase-Script-Execution-Environment)
 * [Proof of Concept](#Proof-of-Concept)
 
 <a name="background"></a>
@@ -27,7 +29,7 @@ vulnerabilities if the participants lack a fair amount of technical
 sophistication, and this has shown itself to be a problem in practice.
 
 The Account-View-On-UTXO-Model (AVOUM) approach solves this by providing a way
-to support "malleable" transactions, which can be submitted to a miner, who is
+to support "malleable" transactions, which can be submitted to a node, who is
 then able to update the transaction in order to solve conflicts with intervening
 transactions, rather than having to reject the original transaction outright,
 thus easing the burden on participants to deal with contention, while still
@@ -57,13 +59,23 @@ To summarize the study's findings:
   version control systems such as Git.
   - Like validation & minting policy scripts, the rebase script is a
     plutus function. Compared to the existing scripts, the rebase script:
-    - In addition to being able to read data from the original
-      transaction with which the rebase script was submitted, the
-      script may also read any applied transactions which consumed the
-      inputs expected by the original transaction.
-    - The script's return value is a new, "rebased" transaction, which
-      is semantically equivalent to the original transaction but updated
-      to apply cleanly to the current state.
+    - Is able to read data from both the original transaction with which
+      the rebase script was submitted, and the last transaction to
+      affect each of the accounts that were inputs to the original
+      transaction. This effectively allows the rebase script to view the
+      "latest state" of these accounts.
+    - Returns a new, "rebased" transaction, which is semantically equivalent
+      to the original transaction but updated to apply cleanly to the current
+      state. This is in contrast with the existing scripts, which either
+      return unit on success, or fail.
+  - Malleable transactions are submitted to the node with two
+    new pieces of information:
+    - The rebase script to use to rebase the transaction if should
+      other transactions consume its inputs before it is applied to
+      the blockchain.
+    - A list of transaction inputs that should be treated as accounts.
+    We define a new API endpoint for submitting malleable transactions;
+    non-malleable transactions can continue to use the existing endpoint.
   - Importantly, the rebase script itself does *not* appear in a
     transaction; it only needs to be recognized and used by rebasing
     nodes. Validation depends only on the validation scripts, as
@@ -79,8 +91,78 @@ To summarize the study's findings:
 <a name="Protocol-and-Interface-Modifications"></a>
 ## Protocol and Interface Modifications
 
+This section describes necessary modifications to Cardano protocols and
+interfaces.
+
+<a name="Malleable-Transaction-Submission-API"></a>
+## Malleable Transaction Submission API
+
+We propose adding a new API, along the lines of the existing submission
+API; to submit a malleable transaction, rather than posting the transaction
+data to `/api/submit/tx`, a user should post a CBOR encoded value of the
+following datatype to `/api/submit/malleable-tx`:
+
+```haskell
+data MalleableTx = MalleableTx
+  { rebaseScript :: ByteString
+    -- ^ The compiled plutus rebase script
+  , accountIndicies :: [Int]
+    -- ^ The indices of transaction inputs that should be treated
+    -- as accounts.
+  , transaction :: ByteString
+    -- ^ The encoded original transaction
+  }
+```
+
 <a name="Rebase-Script-Execution-Environment"></a>
 ### Rebase Script Execution Environment
+
+The rebase script is run when a malleable transaction specifies input
+cells which:
+
+- Have been consumed by another transaction, and
+- Were marked as an account when the transaction was submitted to the
+  miners.
+
+We call the transaction with stale inputs the "original transaction,"
+and the committed transactions which consumed those inputs
+"intervening transactions."
+
+We describe the rebase script's interface as a Haskell function; we assume
+arguments and return values have a suitable serialization as `BuiltinData`.
+First, we define data types used for identifying an account:
+
+```haskell
+
+-- | An account id.
+newtype AvoumId = AvoumId ByteString
+
+-- | The state of a cell that represents an account. The @acId@ field is
+-- understood by rebasing miners and used for indexing purposes. The @acState@
+-- field is available for use by the contract itself.
+data AvoumCell a = AvoumCell
+  { acId :: AvoumId
+  , acState :: a
+  }
+
+```
+
+A rebase script is logically a function of type:
+
+
+```haskell
+rebase :: ScriptContext -> Map AvoumId ScriptContext -> ByteString
+```
+
+...where arguments are:
+
+- The `ScriptContext` passed to the original transaction's validator.
+- A map from account ids in the original transaction to the `ScriptContext`
+  for the last intervening transaction to modify the corresponding account.
+
+...and the return value is the raw bytes of the new transaction (TODO: should
+we expose this as `BuiltinData` instead? It's not like we need to preserve
+signatures).
 
 <a name="Proof-of-Concept"></a>
 ## Proof of Concept
