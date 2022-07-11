@@ -189,18 +189,30 @@ The example prioritizes simplicity and clarity over flexibility; some patterns
 (such as hard-coded indices) are likely inappropriate for a real-world
 implementation, but are sufficient to illustrate the design.
 
-We include Haskell-inspired pseudocode for both a validation and rebase
-script for the auction, as well as validation scripts suitable for bids
-& assets. When it comes time to first implement this proof of concept,
+We include Haskell-inspired pseudocode for a validator, minting policy
+and rebase script for the auction, as well as validation scripts
+suitable for bids & assets. The auction uses a minting policy to ensure
+that cells in invalid states cannot be constructed.
+
+When it comes time to first implement this proof of concept,
 as an incremental step we may hard-code the rebase logic for this particular
 contract in the node, and introduce proper support for rebase scripts
 as a subsequent task.
+
+<a name="Transaction-Format"></a>
+### Transaction Format
+
+
+```haskell
+
+```
 
 # TODO
 
 A (not necessarily exhaustive) list of some things that still need to
 be done to this document:
 
+- Finish the proof of concept section.
 - Go through and make sure we're using proper terminology; some of the
   language is borrowed from a similar study we did for Nervos, so we
   should make sure we're not using terminology that doesn't apply to
@@ -209,3 +221,7 @@ be done to this document:
   - We talk of validation scripts on e.g. escrowed cells, but we may not
     need to use separate ones; we might be able to just get away with
     assigning them to the same credential as the auction itself.
+  - Some of the places we use `ScriptContext` in the interfaces for
+    rebase scripts probably need to use a transaction instead (TxInfo?).
+    ScriptContext includes a purpose field, which iiuc is different for
+    each script in run as part of the transaction.
