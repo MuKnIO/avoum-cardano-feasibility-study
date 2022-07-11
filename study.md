@@ -134,8 +134,22 @@ First, we define data types used for identifying an account:
 
 ```haskell
 
--- | An account id.
-newtype AvoumId = AvoumId ByteString
+-- | An account id. This consists of a currency symbol and an arbitrary
+-- ByteString, which the minting policy for the currency must ensure
+-- is unique for all accounts which hold that currency (perhaps with the
+-- help of trusted validator scripts on issued cells).
+--
+-- Rebasing miners must ensure that any cells they treat as accounts hold
+-- a non-zero balance of the specified currency. Rebasing miners may
+-- assume that this uniquely identifies an account for indexing
+-- purposes; if the currency's minting policy fails to ensure this
+-- the node will not suffer negative consequences, but cells whose ids
+-- collide may spurriously replace one another in the index, possibly
+-- causing rebase scripts to fail.
+newtype AvoumId = AvoumId
+    { aidSymbol :: CurrencySymbol
+    , aidUnique :: ByteString
+    }
 
 -- | The state of a cell that represents an account. The @acId@ field is
 -- understood by rebasing miners and used for indexing purposes. The @acState@
