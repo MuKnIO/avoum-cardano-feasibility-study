@@ -21,12 +21,12 @@ this model.
   * [The Implicit Auction for Blockchain Space](#The-Implicit-Auction-for-Blockchain-Space)
   * [Miner Extractable Value](#Miner-Extractable-Value)
 * [Solution Overview](#Solution-Overview)
-* [Background](#background)
-* [Summary](#Summary)
-* [Protocol and Interface Modifications](#Protocol-and-Interface-Modifications)
-  * [Malleable Transaction Submission API](#Malleable-Transaction-Submission-API)
-  * [Rebase Script Execution Environment](#Rebase-Script-Execution-Environment)
-* [Proof of Concept](#Proof-of-Concept)
+* [Feasibility Study](#Feasibility-Study)
+  * [Summary](#Summary)
+  * [Protocol and Interface Modifications](#Protocol-and-Interface-Modifications)
+    * [Malleable Transaction Submission API](#Malleable-Transaction-Submission-API)
+    * [Rebase Script Execution Environment](#Rebase-Script-Execution-Environment)
+  * [Proof of Concept](#Proof-of-Concept)
 * [Bibliography](#Bibliography)
 * [Appendix](#Appendix)
 * [Ineffective alternatives to AVOUM](#Ineffective-alternatives-to-AVOUM)
@@ -346,8 +346,17 @@ equilibrium, it would be most natural for miners/node operators to offer
 this service themselves, so we propose integrating the necessary
 functionality directly into the core Cardano software.
 
-<a name="summary"></a>
-## Summary
+<a name="Feasibility-Study"></a>
+## Feasibility Study
+
+We have conducted a feasibility study to determine the practicality of
+implementing AVOUM on top of the Cardano blockchain; this section
+describes the results of that study, which include a detailed sketch
+of a concrete design, and a sketch of a proof-of-concept contract
+built atop that design.
+
+<a name="Summary"></a>
+### Summary
 
 To summarize the study's findings:
 
@@ -394,13 +403,13 @@ To summarize the study's findings:
   malleable transactions.
 
 <a name="Protocol-and-Interface-Modifications"></a>
-## Protocol and Interface Modifications
+### Protocol and Interface Modifications
 
 This section describes necessary modifications to Cardano protocols and
 interfaces.
 
 <a name="Malleable-Transaction-Submission-API"></a>
-## Malleable Transaction Submission API
+### Malleable Transaction Submission API
 
 We propose adding a new API, along the lines of the existing submission
 API; to submit a malleable transaction, rather than posting the transaction
@@ -420,7 +429,7 @@ data MalleableTx = MalleableTx
 ```
 
 <a name="Rebase-Script-Execution-Environment"></a>
-### Rebase Script Execution Environment
+#### Rebase Script Execution Environment
 
 The rebase script is run when a malleable transaction specifies input
 cells which:
@@ -484,7 +493,7 @@ we expose this as `BuiltinData` instead? It's not like we need to preserve
 signatures).
 
 <a name="Proof-of-Concept"></a>
-## Proof of Concept
+### Proof of Concept
 
 To illustrate how malleable transactions will work, this section
 sketches a proof of concept implementation of a simple English first
@@ -505,7 +514,7 @@ contract in the node, and introduce proper support for rebase scripts
 as a subsequent task.
 
 <a name="Transaction-Format"></a>
-### Transaction Format
+#### Transaction Format
 
 
 ```haskell
