@@ -12,8 +12,26 @@ Cardano blockchain in particular. In the latter portion, we also
 outline how a representative example open contract could work in
 this model.
 
+* [The Problem](#problem)
+  * [An Auction Gone Wrong](#An-Auction-Gone-Wrong)
+  * [A Market for Open-Contract Transactions is Inevitable](#A-Market-for-Open-Contract-Transactions-is-Inevitable)
+* [Background Concepts](#Background-Concepts)
+  * [UTXO Model vs Account/Balance Model](#UTXO-Model-vs-Account/Balance-Model)
+  * [FOMO3D and the Dark Forest](#FOMO3D-and-the-Dark-Forest)
+  * [The Implicit Auction for Blockchain Space](#The-Implicit-Auction-for-Blockchain-Space)
+  * [Miner Extractable Value](#Miner-Extractable-Value)
+* [Solution Overview](#Solution-Overview)
+* [Background](#background)
+* [Summary](#Summary)
+* [Protocol and Interface Modifications](#Protocol-and-Interface-Modifications)
+  * [Malleable Transaction Submission API](#Malleable-Transaction-Submission-API)
+  * [Rebase Script Execution Environment](#Rebase-Script-Execution-Environment)
+* [Proof of Concept](#Proof-of-Concept)
+
+<a name="problem"></a>
 ## The Problem
 
+<a name="An-Auction-Gone-Wrong"></a>
 ### An Auction Gone Wrong
 
 Let’s imagine that Alice wants to sell a painting by her famous deceased
@@ -58,6 +76,7 @@ Mallory can similarly run a *Economic Denial-of-Service Attack* (EDoS)
 to exclude rivals from any contract where she could benefit from this
 exclusion.
 
+<a name="A-Market-for-Open-Contract-Transactions-is-Inevitable"></a>
 ### A Market for Open-Contract Transactions is Inevitable
 
 Any “open” contract on a UTXO blockchain can be subject to the same
@@ -113,72 +132,216 @@ to the blockchain, and trust that miners would automatically substitute
 the most recent contract UTXO for the one they posted, thereby having
 the blockchain behave exactly as if it had an Account/Balance model.
 
+<a name="Background-Concepts"></a>
+## Background Concepts
 
-# Introduction
+<a name="UTXO-Model-vs-Account/Balance-Model"></a>
+### UTXO Model vs Account/Balance Model
 
-The two main issues we solve are:
+Nervos, like the first blockchain, Bitcoin, represents available assets
+as UTXO, which stands for Unspent Transaction Outputs: each transaction
+may take as inputs some UTXOs of previous transactions (which are
+therefrom spent and no longer UTXOs) and itself produces UTXOs, thereby
+transferring the assets from previous owners to new ones. Ownership is
+enforced by the “lock script” associated with each UTXO, that ensures
+that only the possessors of some cryptographic keys may spend the UTXO,
+either freely or according to some “covenant” that limits their ability.
+(Actually, Nervos uses Cells, that extend the notion of UTXO, and also
+have a “type script”; but that is orthogonal to this issue.)s
 
-- “Open” contracts with an unlimited number of participants or
-  transactions can be subject to economic DoS attacks whereby
-sophisticated attackers can modify the contract’s UTXO faster than the
-victims can react, thus blocking them from interacting with it.  By
-making these transactions suitably malleable, intermediaries (at
-equilibrium, miners) can compete to get the transactions accepted by the
-blockchain in exchange for a fee.
-- Writing UTXO unlocking scripts wherein transactions are suitably
-  malleable enables users to interact with contracts as if the
-blockchain were using an Account/Balance model; but applying the design
-pattern by hand requires a great discipline and the result may or may
-not be recognized by the transaction posting intermediaries (miners).
-Our solution is to automate this discipline away using a suitable Nervos
-library.
+By contrast, the first blockchain with the ability to write smart
+contracts, Ethereum, uses an Account/Balance model, transactions
+transfer assets between accounts that persist across transactions, by
+modifying their balances. Some accounts are simply controlled by
+cryptographic keys, while more elaborate accounts are controlled by
+“smart contracts” which are scripts written in the blockchain’s virtual
+machine.
+
+UTXOs make it easy for participating network nodes to verify
+transactions, in parallel—whereas the Account/Balance model, at least in
+its naive implementation, makes playing or replaying past transactions
+an essentially sequential activity. Joining the network and validating
+its state can therefore be done faster with UTXOs than with
+Account/Balance, for the same reason. UTXOs provide an all over more
+robust data model.
+
+On the other hand, the Account/Balance model makes it much easier to
+interact with “open” contracts involving a lot of participants in
+parallel: a user can “just” sign a transaction that describes the action
+they want to take, and this transaction will be valid irrespective of
+the state of the contract when the action is taken. By contrast, with
+the UTXO model, the user would have to track down exactly the state of
+the contract (its UTXO) at the time the action is to be performed to
+even prepare the correct transaction; but this state could change very
+quickly, which opens the contract users to the Economic
+Denial-of-Service Attack described above.
+
+<a name="FOMO3D-and-the-Dark-Forest"></a>
+### FOMO3D and the Dark Forest
+
+Economic Denial-of-Service Attacks are not mere speculation. And they
+are not just for UTXO blockchains. Indeed, they already happen, all the
+time, on the Ethereum blockchain, that uses the Account/Balance model!
+The most famous stories about it are the winning of the FOMO3D tontine,
+and the Dark Forest of front-runners for swap contracts.
+
+The FOMO3D was a joke of a contract, a blockchain variant of a tontine.
+In a historical tontine, many participants, usually young people, put
+money in a pot, or left it to a careful money manager—until all the
+participants died but one, who then got all the money in the pot. In
+times and places when life expectancy was shorter than the modern world,
+the lone survivor might even still be young enough to actually enjoy his
+fortune. To adapt the concept of tontine to the blockchain, a simple
+mechanism was used to detect the last man standing (or then again last
+robot operating): anyone could add tokens to the pot at any time (above
+some floor contribution) and thereby become a participant; to take the
+tokens out, you just had to be the last one putting tokens in, with no
+one else having put in any tokens for the last 24 hours. Of course, some
+rival people were running robots to prevent anyone else from winning, by
+making sure to chip in a few tokens after 23 hours and 55 minutes or so,
+if needed. And yet, some clever person managed to steal the then
+million-dollar pot while rival robots were still operating. How did he
+do? By running an Economic Denial-of-Service Attack: he simply put money
+in the pot, waited for about 23 hours and 55 minutes, and then bought
+the entire Ethereum blockchain for 5 minutes until his rivals had been
+excluded long enough for him to take the money out. How did he buy the
+entire blockchain?  With repeat copies of a transaction that paid for
+the entire block gas limit at a gas price advantageous to the miners,
+until the 5 minutes had passed.
+
+In the Dark Forest story, also on Ethereum, a person noticed a way that
+anyone can take tokens out of a misconstrued ERC20 token contract with a
+clever swap transaction. A good actor, he decided to take the tokens out
+before they disappear, and safeguard them for their original owners. But
+there are robots out there that watch all ERC20 contracts for any
+advantageous swap transaction and will front-run that transaction with a
+rival transaction executing the same swap, but to the advantage of the
+robot operator rather than the original arbitrageur. To make sure the
+rival transaction makes it in, the robot simply puts a larger gas price,
+as long as there is any profit in the swap large enough to justify the
+gas cost. And our good actor was thereby scooped by a robot, and
+concluded that Ethereum is a Dark Forest where you’ll easily get
+mugged.
+
+<a name="The-Implicit-Auction-for-Blockchain-Space"></a>
+### The Implicit Auction for Blockchain Space
+
+Thus, Economic Denial-of-Service Attacks already exist, and so even on
+Account/Balance blockchains. At the bottom of the issue, the underlying
+reality is that space on the blockchain is scarce. Whether limited
+explicitly through a conventional block size limit, a conventional gas
+limit, or just implicitly via the network bandwidth of the winning
+miners, there is a limit on how many transactions can make it to any
+given block. From an economic point of view, that means that getting a
+transaction into a block is winning an auction.
+
+Therefore, the first issue, demonstrated by the FOMO3D story, is that of
+technical sophistication. When one participant knows how to play the
+transaction-posting auction correctly, when the other participants are
+too inept to even realize the game they’re playing, more technically
+sophisticated than others, the sophisticated participant can run circles
+around the other ones and prevent them from ever getting their
+transactions to the blockchain, then cause them to timeout and extract
+any resulting value from the smart contract.
+
+In the case of racing a UTXO, our solution above makes the same
+sophistication available to every participant, for a small fee.
+Sophisticated professionals, typically miners, handle the complexity for
+regular users, and the technical problem has been reduced down to the
+underlying economic problem. In the case of the FOMO3D story above, the
+economic problem was hidden under a very thin layer of technical
+sophistication. In both cases, the auction for blockchain space,
+previously left implicit, was made explicit: to get your transaction in,
+you need to bid a higher fee than your rivals—which shouldn’t be a big
+problem if you’re playing a positive sum game while they’re playing a
+zero-sum game.
+
+Now, the auction for blockchain space is a first price auction, since a
+second price auction would be gameable by miners. Thus, to win an
+auction and get their transactions in, the participants must remain
+active, monitor the blockchain, and carefully increase their bid with
+market conditions, alongside their rivals; otherwise they’ll pay too
+much (if they reveal their actual maximum bid too early), or they’ll
+fail to get in (if they fail to raise the price to their maximum bid).
+There is still some sophistication required on the side of the
+participant: not technical sophistication, but economic sophistication.
+Posting transactions is still not fire-and-forget: users must keep
+watching the blockchain, check whether their transaction went through,
+and if not, sign a new variant of the transaction with a higher fee and
+watch again (and be ready to be surprised in case their old transaction
+made it through after all). This matters a lot whenever there is a
+deadline to sending transactions, which is almost always the case when
+writing robots that automate participation to some DApps.
+
+To go back to our illustrating example, the FOMO3D story, “all” the
+tontine-participating robots had to do to keep playing their chicken
+game was to match and slightly outbid the fees posted by the attacker
+for one block. Indeed, to win the pot, the attacker had to win the
+auction for each and every block for the entire duration of the attack,
+whereas the defenders would only have had to win one single block. Since
+there were about 20 blocks in those five minutes, they could have let
+him buy fifteen entire blocks before they outbid him, making it a dear
+lesson no would-be attacker would forget. Defending successfully would
+have been an order of magnitude less costly than the attack. It would
+have been yet another order of magnitude less costly if they had started
+their transactions an hour in advance rather than waited until just five
+minutes before the deadline. Or if the blockchain had had ten times as
+much throughput. In general, defenders against Economic DoS attacks are
+at an advantage and attackers are at a disadvantage—but only if they
+play the game correctly. With economically rational and technically
+correct robots, the attacker would stand no chance. But that in itself
+is the topic for a separate project.
+
+<a name="Miner-Extractable-Value"></a>
+### Miner Extractable Value
+
+The second issue, demonstrated by the “Dark Forest” story, is that in a
+sophisticated-enough market, the miners will extract the value that is
+theirs. And this value comprises the fees that a transaction is worth
+paying for, as well as any profit that can be made by rewriting
+malleable transactions to their profit. This includes changing the name
+of the beneficiary of a single-transaction arbitrage—a zero-sum game
+where the user loses—as well as inserting the latest UTXO in a
+transaction to extract a fee—a positive-sum game where the user wins. In
+doing so, they are not being evil in one case and good in the other,
+they are just playing the game competently, as designed.
+
+Super-competent miners might even loosely collude with each other to
+squeeze higher transaction fees from users who fail to tip their
+transactions sufficiently when they have a short deadline. This
+collusion in practice will be counterbalanced by the interest of the
+miner to defect from the cartel and accept the lower fee for themselves,
+rather than help another miner collect the higher fee. But the more
+concentrated the mining power, the more the miners should cooperate to
+raise fees. However, this is speculation for a distant future.
+
+Our present project is to build the engine for miners to play the
+positive-sum game where miners and users win as the users’ transactions
+get posted.
+
+
+<a name="Solution-Overview"></a>
+## Solution Overview
+
+The Account-View-On-UTXO-Model (AVOUM) approach solves the EDoS problem
+described above by providing a way to support "malleable" transactions, which
+can be submitted to a node, who is then able to update the transaction in
+order to solve conflicts with intervening transactions, rather than having
+to reject the original transaction outright, thus easing the burden on
+participants to deal with contention, while still allowing the benefits
+of the UTXO model.
 
 Our solution will enable the safe deployment of “open” contracts on the
 Cardano blockchain, which is not currently possible, and will bring its
 smart contract capabilities in parity with Ethereum.
 
------
-
-This document describes the results of a feasibility study for
-implementing AVOUM on Cardano.
-
-* [Background](#background)
-* [Summary](#Summary)
-* [Protocol and Interface Modifications](#Protocol-and-Interface-Modifications)
-  * [Malleable Transaction Submission API](#Malleable-Transaction-Submission-API)
-  * [Rebase Script Execution Environment](#Rebase-Script-Execution-Environment)
-* [Proof of Concept](#Proof-of-Concept)
-
-<a name="background"></a>
-## Background
-
-Cardano is a UTXO blockchain, like Bitcoin but unlike the
-account/balance model used by Ethereum. This has advantages, such as
-parallel verification of transactions, but it means that contracts have
-no built-in notion of a stable identity, and transactions are only valid
-if they operate on the current state of a contract. In contrast, with
-the account/balance model, transactions cannot be verified in parallel,
-but a transaction can be applied to a contract even if there have been
-intervening transactions since it was constructed.
-
-This causes problems if there is contention on a contract, as the author of a
-transaction must continually monitor the blockchain and retry submitting the
-transaction after each intervening change. This can result in denial of service
-vulnerabilities if the participants lack a fair amount of technical
-sophistication, and this has shown itself to be a problem in practice.
-
-The Account-View-On-UTXO-Model (AVOUM) approach solves this by providing a way
-to support "malleable" transactions, which can be submitted to a node, who is
-then able to update the transaction in order to solve conflicts with intervening
-transactions, rather than having to reject the original transaction outright,
-thus easing the burden on participants to deal with contention, while still
-allowing the benefits of the UTXO model.
-
-For more background information see the [AVOUM for
-Nervos](https://j.mp/AVOUMforNervos) document, which outlines the same
-problem in the context of the Nervos blockchain, and the corresponding
-[AVOUM for Nervos Feasibility
-Study](https://gitlab.com/mukn/nervos-avoum-feasibility-study/-/blob/main/study.md)
+It is worth observing that the AVOUM service could, in principle, be
+provided entirely as an added layer atop the current Cardano blockchain;
+it does not *require* changes to the core Cardano software (such as
+`cardano-node`). However, as discussed above, once the market reaches
+equilibrium, it would be most natural for miners/node operators to offer
+this service themselves, so we propose integrating the necessary
+functionality directly into the core Cardano software.
 
 <a name="summary"></a>
 ## Summary
