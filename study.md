@@ -27,6 +27,9 @@ this model.
   * [Malleable Transaction Submission API](#Malleable-Transaction-Submission-API)
   * [Rebase Script Execution Environment](#Rebase-Script-Execution-Environment)
 * [Proof of Concept](#Proof-of-Concept)
+* [Bibliography](#Bibliography)
+* [Appendix](#Appendix)
+* [Ineffective alternatives to AVOUM](#Ineffective-alternatives-to-AVOUM)
 
 <a name="problem"></a>
 ## The Problem
@@ -509,6 +512,7 @@ as a subsequent task.
 
 ```
 
+<a name="Bibliography"></a>
 ## Bibliography
 
 - “Ethereum is a Dark Forest”, Dan Robinson and Georgios
@@ -528,6 +532,70 @@ as a subsequent task.
 - “Flashbots Transparency Report”
   <https://medium.com/flashbots/flashbots-transparency-report-february-2021-8ac45b467d0a>
 
+<a name="Appendix"></a>
+## Appendix
+
+<a name="Ineffective-alternatives-to-AVOUM"></a>
+### Ineffective alternatives to AVOUM
+
+Can the race condition that AVOUM solves be solved without AVOUM? One
+tempting alternative approach is to split interactions in two phases,
+one in which orders are issued in parallel without contended access to
+shared state, while the other sees the orders being combined with shared
+state. For instance, in an auction, bids would be posted in parallel
+without touching the contract state, then in a second phase, they would
+be collected with the top bid winning.
+
+With this approach, no attack is possible during the first phase, and
+the attack surface in the second phase is bounded by the number of
+orders issued during the first phase. Unhappily, this alternative
+approach does not actually solve the problem, and only results in making
+life harder for honest users.
+
+Indeed, the attacker can publish plenty of UTXOs in the first phase,
+under as many sybil identities; then in the second phase, the attacker
+can still race the honest users out of being able to access the shared
+state, by issuing transactions to process his UTXOs in many different
+orders, in parallel. The phasing forced him to be more prepared, reveal
+his attack intention and pay for these UTXOs. But by hypothesis he is
+more technically savvy and prepared than honest participants, can reveal
+at the last minute, and was already willing to pay for said UTXOs. The
+approach forces him to only have bounded attack capacity during the
+second phase, but he also only needed bounded attack capacity all along,
+and by hypothesis already possesses it.
+
+Honest participants can detect the attack at the end of the first phase,
+but inasmuch as they can do anything to defend against it, the
+infrastructure required for this defense would be no simpler than the
+one required to sustain the original attack. And inasmuch as miner
+intelligence could help honest participants by letting them pay higher
+fees to have their requests prioritized over those of the attacker,
+adding this intelligence to the miners’ software would not be simpler
+than adding AVOUM support to it.
+
+In the end, no actual defense is achieved by this approach, whereas the
+interaction flow is made longer and more complex for users, who now have
+to issue two transactions instead of one, during each of two phases,
+with an additional delay for the second phase.
+
+Moreover, it is not clear that this approach is applicable to arbitrary
+contracts. Auctions and any interaction with a bounded number of
+transaction phases can use this approach and at most double the number
+of transaction phases to implement this dubious attack mitigation. But
+continuous interactions in which new participants can join with no
+deadline limitation cannot be modified this way: for instance, tokens
+with shared state as needed for yield farming, the books of exchanges,
+and other common continuous interactions, cannot be transformed this
+way. Arbitrarily dividing these interactions into phases is conceivable,
+but would only add latency and complexity without solving the underlying
+issue.
+
+Another “solution” is to vastly increase the cost of interacting with
+the shared state, via a fee that discourages posting of UTXOs. But this
+fee only discourages attacks inasmuch as it discourages honest
+interactions even more so, and in the end doesn’t actually prevent the
+attack in the case when honest interactions themselves weren’t
+discouraged.
 
 # TODO
 
