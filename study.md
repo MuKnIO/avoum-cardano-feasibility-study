@@ -509,6 +509,26 @@ as a subsequent task.
 
 ```
 
+## Bibliography
+
+- “Ethereum is a Dark Forest”, Dan Robinson and Georgios
+  Konstantopoulos, August 2020,
+  <https://medium.com/@danrobinson/ethereum-is-a-dark-forest-ecc5f0505dff>
+- “Flash Boys 2.0: Frontrunning, Transaction Reordering, and Consensus
+  Instability in Decentralized Exchanges”, Daian et al., April 2019,
+  <https://arxiv.org/pdf/1904.05234.pdf>
+- “Why Developing for the Blockchain is Hard — Part 1: Posting
+  Transactions”, François-René Rideau, December 2018,
+  <https://hackernoon.com/why-developing-for-the-blockchain-is-hard-part-1-posting-transactions-dde21c025c65>
+- “How the winner got Fomo3D prize — A Detailed Explanation”, SECBIT Labs, August 2018,
+  <https://medium.com/coinmonks/how-the-winner-got-fomo3d-prize-a-detailed-explanation-b30a69b7813f>
+- “Chimeric Ledgers: Translating and Unifying UTXO-based and
+  Account-based Cryptocurrencies”, Joachim Zahnentferner, March 2018,
+  <https://iohk.io/en/research/library/papers/chimeric-ledgerstranslating-and-unifying-utxo-based-and-account-based-cryptocurrencies/>
+- “Flashbots Transparency Report”
+  <https://medium.com/flashbots/flashbots-transparency-report-february-2021-8ac45b467d0a>
+
+
 # TODO
 
 A (not necessarily exhaustive) list of some things that still need to
