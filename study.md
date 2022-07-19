@@ -58,6 +58,62 @@ Mallory can similarly run a *Economic Denial-of-Service Attack* (EDoS)
 to exclude rivals from any contract where she could benefit from this
 exclusion.
 
+### A Market for Open-Contract Transactions is Inevitable
+
+Any “open” contract on a UTXO blockchain can be subject to the same
+Economic DoS: if anyone can interact with the contract, or if an
+existing participant can interact with it an indefinite number of times
+before others may react, then a sophisticated attacker can use the same
+technique as described above to effectively prevent any other
+unsophisticated participant from interacting with the contract until
+after it is too late.
+
+Even without an intentional attacker, the UTXO for heavily-used
+contracts will be subject to heavy contention and frequent change, such
+that regular non-technical users will have trouble interacting with it.
+They have to watch the blockchain, determine the UTXO for the contract,
+sign a transaction with this UTXO, wait for this transaction to either
+make it through or be invalidated by a rival transaction, then sign a
+new transaction and try again, repeating for hours on, hoping that at
+some point there will be a lull in the activity of that contract and
+their transaction will finally make it through.
+
+Does that mean that open contracts on UTXO blockchains are forever
+reserved for use by sophisticated participants who can run a full node,
+watch the blockchain at high-speed, and race rival transactions in all
+of multiple possible worlds at the same time, in servers close enough to
+the miners to matter?
+
+Actually, no: someone sophisticated has to do this job. But if the open
+contract is properly structured, then this someone can be any
+participant in a transaction posting auction market. Then, the
+economically competent but technically unsophisticated user posts only
+have to pay a sufficient transaction fee, and the sophisticated
+professionals will compete with each other to be the one who effectively
+posts the transaction.
+
+A single sophisticated professional — offering his services to ensure
+that users’ transactions get through in a timely fashion to interact
+with frequently changing contracts — would likely be enough to start
+this market. Posting a transaction then becomes fire-and-forget for
+regular users, and the professional will earn high fees for consistently
+winning the race to the UTXO. High fees will likely attract competition,
+until a market emerges where sophisticated users compete to earn fees
+from users, driving those fees down, and flooding the network with rival
+transactions.
+
+Eventually, miners would realize that they could cut out the middleman
+between end-users and the blockchain by running those servers directly
+on their mining rigs, saving a lot in fees and network traffic for
+everyone.
+
+In the end, when the market finally reached its equilibrium, users would
+interact with open contracts by posting suitably malleable transactions
+to the blockchain, and trust that miners would automatically substitute
+the most recent contract UTXO for the one they posted, thereby having
+the blockchain behave exactly as if it had an Account/Balance model.
+
+
 # Introduction
 
 The two main issues we solve are:
