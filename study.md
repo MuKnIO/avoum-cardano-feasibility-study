@@ -1,6 +1,6 @@
 # AVOUM for Cardano
 
-This document describes the design of the Account-View-on-UTXO Model
+This document describes the design of Account-View-on-UTXO-Model
 (AVOUM), a technique whereby users may interact with DApps using the
 convenient Account/Balance model made popular by Ethereum on top of a
 smart-contract-capable Blockchain that uses the more robust but more
