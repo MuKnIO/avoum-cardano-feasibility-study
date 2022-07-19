@@ -138,7 +138,7 @@ the blockchain behave exactly as if it had an Account/Balance model.
 <a name="UTXO-Model-vs-Account/Balance-Model"></a>
 ### UTXO Model vs Account/Balance Model
 
-Nervos, like the first blockchain, Bitcoin, represents available assets
+Cardano, like the first blockchain, Bitcoin, represents available assets
 as UTXO, which stands for Unspent Transaction Outputs: each transaction
 may take as inputs some UTXOs of previous transactions (which are
 therefrom spent and no longer UTXOs) and itself produces UTXOs, thereby
@@ -146,8 +146,8 @@ transferring the assets from previous owners to new ones. Ownership is
 enforced by the “lock script” associated with each UTXO, that ensures
 that only the possessors of some cryptographic keys may spend the UTXO,
 either freely or according to some “covenant” that limits their ability.
-(Actually, Nervos uses Cells, that extend the notion of UTXO, and also
-have a “type script”; but that is orthogonal to this issue.)s
+(Cardano's eUTXO model extends this, but in ways that are orthogonal to
+this issue).
 
 By contrast, the first blockchain with the ability to write smart
 contracts, Ethereum, uses an Account/Balance model, transactions
