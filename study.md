@@ -490,9 +490,7 @@ rebase :: ScriptContext -> Map AvoumId ScriptContext -> ByteString
 - A map from account ids in the original transaction to the `ScriptContext`
   for the last intervening transaction to modify the corresponding account.
 
-...and the return value is the raw bytes of the new transaction (TODO: should
-we expose this as `BuiltinData` instead? It's not like we need to preserve
-signatures).
+...and the return value is the raw bytes of the new transaction.
 
 <a name="Proof-of-Concept"></a>
 ### Proof of Concept
