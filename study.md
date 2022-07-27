@@ -396,8 +396,9 @@ To summarize the study's findings:
     is currently the case.
 - In general, inputs to malleable transactions will require specialized
   validation scripts, as common validation scripts disallow malleability
-  by design (e.g. by verifying a signature). For regular users with regular
-  validation scripts to use malleable transactions thus requires an extra
+  by design, and inputs which require a signature also defeat
+  malleability.  For users holding assets protected by one of these
+  conventional mechanisms, using malleable transactions thus requires an extra
   step: first, cells compatible with malleability are created in a regular
   non-malleable transaction. Only then can these cells be assembled into
   malleable transactions.
