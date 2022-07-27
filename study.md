@@ -468,7 +468,8 @@ newtype AvoumId = AvoumId
 
 -- | The state of a cell that represents an account. The @acId@ field is
 -- understood by rebasing miners and used for indexing purposes. The @acState@
--- field is available for use by the contract itself.
+-- field is treated as opaque by the miner, and available for use by the
+-- contract itself.
 data AvoumCell a = AvoumCell
   { acId :: AvoumId
   , acState :: a
