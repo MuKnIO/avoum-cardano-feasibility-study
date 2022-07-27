@@ -327,12 +327,12 @@ get posted.
 ## Solution Overview
 
 The Account-View-On-UTXO-Model (AVOUM) approach solves the EDoS problem
-described above by providing a way to support "malleable" transactions, which
-can be submitted to a node, who is then able to update the transaction in
-order to solve conflicts with intervening transactions, rather than having
-to reject the original transaction outright, thus easing the burden on
-participants to deal with contention, while still allowing the benefits
-of the UTXO model.
+described above by providing a way to support "malleable" transactions.
+Malleable transactions can be submitted to a node, who is then able to
+update the transaction in order to solve conflicts with intervening
+transactions, rather than having to reject the original transaction
+outright. This eases the burden on participants to deal with contention,
+while still allowing the benefits of the UTXO model.
 
 Our solution will enable the safe deployment of “open” contracts on the
 Cardano blockchain, which is not currently possible, and will bring its
