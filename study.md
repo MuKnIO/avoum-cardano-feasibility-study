@@ -513,6 +513,31 @@ as an incremental step we may hard-code the rebase logic for this particular
 contract in the node, and introduce proper support for rebase scripts
 as a subsequent task.
 
+<a name="Design"></a>
+#### Design
+
+The auction contract tracks its state in an account, whose datum is
+an encoded value of type `AvoumCell AuctionState`, where `AuctionState`
+is defined as:
+
+```haskell
+data AuctionState = AuctionState
+    { asDeadline :: POSIXTime
+      -- ^ Deadline for bids; after this the auction is closed.
+    , asCurrentBidder :: Credential
+      -- ^ Credential of the current highest submitted bid; if the
+      -- current bid wins the auction, this credential should be
+      -- attached to the purchased assets.
+    , asSeller :: Credential
+      -- ^ Credential of the seller; when the auction closes,
+      -- this credential should be attached to the winning bid.
+    , asCurrentBid :: Value
+      -- ^ The current highest bid.
+    , asAssets :: Value
+      -- ^ The assets being sold.
+    }
+```
+
 <a name="Transaction-Format"></a>
 #### Transaction Format
 
