@@ -513,8 +513,8 @@ as an incremental step we may hard-code the rebase logic for this particular
 contract in the node, and introduce proper support for rebase scripts
 as a subsequent task.
 
-<a name="Design"></a>
-#### Design
+<a name="Auction-State"></a>
+#### Auction State
 
 The auction contract tracks its state in an account, whose datum is
 an encoded value of type `AvoumCell AuctionState`, where `AuctionState`
@@ -536,6 +536,73 @@ data AuctionState = AuctionState
     , asAssets :: Value
       -- ^ The assets being sold.
     }
+```
+
+For an `AvoumCell AuctionState` to be valid, its cell must hold
+tokens equal to the sum of:
+
+- the current bid (`asCurrentBid`),
+- the assets being sold (`asAssets`),
+- ...and a balance of 1 token of the currency identified in the cell's
+  `aidSymbol` field of its account id.
+
+This invariant is enforced by the minting policy when issuing the token
+in `aidSymbol`, and by the validator when updating the state.
+
+<a name="Minting-Policy"></a>
+#### Minting Policy
+
+The minting policy is responsible for ensuring:
+
+- A newly minted token's datum is a valid `AvoumCell AuctionState`, as
+  described above.
+- All auctions have distinct `AvoumId`s.
+
+Below we sketch the implementation of the minting policy:
+
+```haskell
+auctionPolicy :: ScriptContext -> Bool
+auctionPolicy ctx =
+  let ownSymbol = ownCurrencySymbol ctx
+      txInfo    = scriptContextTxInfo ctx
+
+      -- State assigned to the newly minted cell.
+      outputState :: AvoumCell AuctionState
+      outputState = decode $ snd (txInfoData txInfo !! 0)
+
+      txOut = txInfoOutputs txInfo !! 0
+  in
+  and
+    [ length (txInfoInputs txInfo) == 1
+    , length (txInfoOutputs txInfo) == 1
+
+    -- Make sure we're minting exactly one of the expected token type
+    -- XXX/TODO: It is unclear to me why the map is nested here, and
+    -- what the role of TokenName is. Maybe it's a namespacing mechanism
+    -- so that a single minting policy can mint different tokens? Need
+    -- to investigate further.
+    , txInfoMint txInfo ==
+        Value $ Map.singleton ownSymbol (Map.singleton "auction" 1)
+
+    , aidSymbol (acId outputState) == ownSymbol
+
+    -- We use the reference to this transaction's first input as our
+    -- unique value; since this transaction spends that output, it
+    -- cannot be used again.
+    , decode (aidUnique (acId outputState)) ==
+        txInInfoOutRef (txInfoInputs txInfo !! 0)
+
+    -- Check that the value of the cell agrees with its state.
+    , txOutValue txOut == sum
+        [ asAssets (acState outputState)
+        , asCurrentBid (acState outputState)
+        , txInfoMint txInfo
+        ]
+
+    -- Make sure the output is guarded by our expected validator script.
+    -- TODO: figure out how to get that hash.
+    , addressCredential (txOutAddress txOut) == ScriptCredential validatorHash
+    ]
 ```
 
 <a name="Transaction-Format"></a>
