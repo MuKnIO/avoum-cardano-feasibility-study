@@ -578,6 +578,46 @@ auctionMarkerValue mintSym =
     Value $ Map.singleton mintSym (Map.singleton "auction" 1)
 ```
 
+<a name="Transaction-Format"></a>
+#### Transaction Format
+
+There are three types of transactions that can involve an auction:
+
+- Opening the auction
+- Placing a bid
+- Closing the auction (and distributing assets/bids).
+
+Opening the auction is handled by the minting policy; the transaction
+should have one input, which is the assets being sold, and one output
+which is the auction cell.
+
+The other two transaction types are handled by the validator. The
+validator can distinguish them based on their valid time range;
+bids must be valid only before the deadline, and closing transactions
+must be valid only after the deadline.
+
+A transaction issuing a new bid comprises:
+
+- Two input cells
+  - The first of which is the initial auction state
+  - The second of which is a cell constituting a new bid
+- Two output cells
+  - The first of which is the new auction state; it should
+    reflect the new highest bid (which of course must be greater
+    than the old one).
+  - The second of which is a refund for the previous highest bidder;
+    it should have the value and credential specified in the input
+    auction state.
+
+A transaction closing the auction comprises:
+
+- One input cell, the auction state.
+- Two output cells
+  - The first of which is the assets being sold, which should have the
+    credential specified for the current bidder in the input state.
+  - The second of which is the highest bid, and should have the
+    credentials for the seller.
+
 <a name="Minting-Policy"></a>
 #### Minting Policy
 
@@ -717,12 +757,12 @@ txValid () input ctx =
 
 ```
 
-<a name="Transaction-Format"></a>
-#### Transaction Format
-
+<a name="Rebase-Script"></a>
+#### Rebase Script
 
 ```haskell
-
+rebase :: ScriptContext -> Map AvoumId ScriptContext -> ByteString
+rebase ctx ctxById = error "TODO"
 ```
 
 <a name="Bibliography"></a>
