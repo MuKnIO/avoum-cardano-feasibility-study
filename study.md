@@ -552,7 +552,31 @@ tokens equal to the sum of:
   `aidSymbol` field of its account id.
 
 This invariant is enforced by the minting policy when issuing the token
-in `aidSymbol`, and by the validator when updating the state.
+in `aidSymbol`, and by the validator when updating the state. We assume
+helpers:
+
+
+```haskell
+-- | Check that the value of the output agrees with its state.
+valueStateConsistent :: TxOut -> AuctionState -> Bool
+valueStateConsistent txOut state =
+  txOutValue txOut == sum
+    [ asAssets state
+    , asCurrentBid state
+    , auctionMarkerValue (asMintSymbol state)
+    ]
+
+-- | Value whose presence indicates taht this is an auction cell; the
+-- miniting policy for the passed CurrencySymbol must enforce that only
+-- auction state cells can hold this.
+auctionMarkerValue :: CurrencySymbol -> Value
+auctionMarkerValue mintSym =
+    -- XXX/TODO: It is unclear to me why the map is nested here, and
+    -- what the role of TokenName is. Maybe it's a namespacing mechanism
+    -- so that a single minting policy can mint different tokens? Need
+    -- to investigate further.
+    Value $ Map.singleton mintSym (Map.singleton "auction" 1)
+```
 
 <a name="Minting-Policy"></a>
 #### Minting Policy
@@ -582,27 +606,16 @@ auctionPolicy ctx =
     , length (txInfoOutputs txInfo) == 1
 
     -- Make sure we're minting exactly one of the expected token type
-    -- XXX/TODO: It is unclear to me why the map is nested here, and
-    -- what the role of TokenName is. Maybe it's a namespacing mechanism
-    -- so that a single minting policy can mint different tokens? Need
-    -- to investigate further.
-    , txInfoMint txInfo ==
-        Value $ Map.singleton ownSymbol (Map.singleton "auction" 1)
+    , txInfoMint txInfo == auctionMarkerValue ownSymbol
 
     , aidSymbol (acId outputState) == ownSymbol
+    , valueStateConsistent txOut (acState outputState)
 
     -- We use the reference to this transaction's first input as our
     -- unique value; since this transaction spends that output, it
     -- cannot be used again.
     , decode (aidUnique (acId outputState)) ==
         txInInfoOutRef (txInfoInputs txInfo !! 0)
-
-    -- Check that the value of the cell agrees with its state.
-    , txOutValue txOut == sum
-        [ asAssets (acState outputState)
-        , asCurrentBid (acState outputState)
-        , txInfoMint txInfo
-        ]
 
     -- Make sure the output is guarded by our expected validator script.
     -- We assume the hash of the validator script is known and can just
@@ -625,9 +638,11 @@ it has begun.
 ```haskell
 
 txValid :: () -> AvoumCell AuctionState -> ScriptContext -> Bool
-txValid () cell ctx =
+txValid () input ctx =
     let deadline = asDeadline (acState cell)
+        scriptContextTxInfo ctx
         validRange = txInfoValidRange (scriptContextTxInfo ctx)
+
     in
     if ivTo validRange < deadline then
         -- Before the deadline; check for a valid bid.
@@ -641,8 +656,64 @@ txValid () cell ctx =
         -- deadline; reject.
         False
  where
-    txValidBid = undefined
-    txValidClose = undefined
+    txValidBid =
+        let txInfo = scriptContextTxInfo ctx
+            output :: AvoumCell AuctionState
+            output = decode $ snd (txInfoData txInfo !! 0)
+            inS = acState input
+            outS = acState ouptut
+
+            auctionOut = txInfoOutputs txInfo !! 0
+            refundOut  = txInfoOutputs txInfo !! 1
+            auctionIn = txInfoInputs txInfo !! 0
+        in
+        and
+            [ -- Two outputs: new state and refunded old bid:
+              length (txInfoOutputs txInfo) == 2
+            -- Two inputs: old state and new bid:
+            , length (txInfoInputs txInfo) == 2
+
+            -- This script should be invoked in order to spend input
+            -- cell 0. This is important when we check for consistency
+            -- between that cell and the new one:
+            , scriptContextPurpose ctx == Spending (txInInfoOutRef auctionIn)
+
+            -- Validity checks for new auction state:
+            , acId input == acId output
+            , valueStateConsistent auctionOut outS
+            ,    addressCredential (txOutAddress (txInInfoResolved auctionIn))
+              == addressCredential (txOutAddress                   auctionOut)
+
+            -- New bid must actually beat the old one:
+            , asCurrentBid sOut > asCurrentBid sIn
+
+            -- Refunded old bid must have the right value & ownership:
+            , txOutValue refundOut == asCurrentBid sIn
+            , addressCredential (txOutAddress refundOut) == asCurrentBidder sIn
+
+            -- TODO: check that new auction state has the correct bidder?
+            -- Need a convention for denoting this then.
+            -- Or maybe just leave that to the validator for the input
+            -- bid, since this allows more flexible policy?
+            ]
+    txValidClose =
+      let s         = acState input
+          txInfo    = scriptContextTxInfo ctx
+          assetsOut = txInfoOutputs txInfo !! 0
+          bidOut    = txInfoOutputs txInfo !! 1
+      in
+      and
+        [ -- Should output two cells, one for the assets being
+          -- sold, and one for the bid being accepted:
+          length (txInfoOutputs txInfo) == 2
+
+        -- Make sure the ouptuts have the values and credentials they
+        -- should:
+        , txOutValue assetsOut == asAssets s
+        , txOutValue bidOut == asCurrentBid s
+        , addressCredential (txOutAddress assetsOut) == asSeller s
+        , addressCredential (txOutAddress bidOut) == asCurrentBidder s
+        ]
 
 ```
 
