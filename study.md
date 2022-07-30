@@ -766,7 +766,16 @@ txValid () input ctx =
 
 ```haskell
 rebase :: ScriptContext -> Map AvoumId ScriptContext -> ByteString
-rebase ctx ctxById = error "TODO"
+rebase origCtx ctxById =
+    let origTxInfo = scriptContextTxInfo origCtx
+
+        origOutputState :: AvoumCell AuctionState
+        origOutputState = decode $ snd (txInfoData origTxInfo !! 0)
+
+        interveningCtx = ctxById Map.! acId origOutputState
+        interveningTxInfo = scriptContextTxInfo interveningCtx
+    in
+    error "TODO"
 ```
 
 <a name="Bibliography"></a>
