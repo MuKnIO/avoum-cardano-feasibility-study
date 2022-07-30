@@ -616,6 +616,36 @@ auctionPolicy ctx =
     ]
 ```
 
+<a name="Validator"></a>
+#### Validator
+
+The validator is responsible for enforcing the rules of the auction once
+it has begun.
+
+```haskell
+
+txValid :: () -> AvoumCell AuctionState -> ScriptContext -> Bool
+txValid () cell ctx =
+    let deadline = asDeadline (acState cell)
+        validRange = txInfoValidRange (scriptContextTxInfo ctx)
+    in
+    if ivTo validRange < deadline then
+        -- Before the deadline; check for a valid bid.
+        txValidBid
+    else if ivFrom validRange > deadline then
+        -- After the deadline; check for a valid auction-closing
+        -- transaction.
+        txValidClose
+    else
+        -- Ambiguous as to whether we are before or after the
+        -- deadline; reject.
+        False
+ where
+    txValidBid = undefined
+    txValidClose = undefined
+
+```
+
 <a name="Transaction-Format"></a>
 #### Transaction Format
 
