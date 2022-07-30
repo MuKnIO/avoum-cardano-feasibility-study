@@ -816,6 +816,9 @@ A (not necessarily exhaustive) list of some things that still need to
 be done to this document:
 
 - Finish the proof of concept section.
+  - Fill in TODOs in the comments
+  - Do the rebase script
+  - ...?
 - Go through and make sure we're using proper terminology; some of the
   language is borrowed from a similar study we did for Nervos, so we
   should make sure we're not using terminology that doesn't apply to
@@ -828,3 +831,4 @@ be done to this document:
     rebase scripts probably need to use a transaction instead (TxInfo?).
     ScriptContext includes a purpose field, which iiuc is different for
     each script in run as part of the transaction.
+- Make sure the TOC is consistent, after the body has all been written.
