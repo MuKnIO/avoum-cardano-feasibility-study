@@ -535,6 +535,11 @@ data AuctionState = AuctionState
       -- ^ The current highest bid.
     , asAssets :: Value
       -- ^ The assets being sold.
+    , asMintSymbol :: CurrencySymbol
+      -- ^ Symbol used by our minting policy. We store this field
+      -- here to break a cyclic dependency; otherwise the validator
+      -- would have to know the minting policy's currency symbol
+      -- a-priori.
     }
 ```
 
@@ -600,8 +605,14 @@ auctionPolicy ctx =
         ]
 
     -- Make sure the output is guarded by our expected validator script.
-    -- TODO: figure out how to get that hash.
+    -- We assume the hash of the validator script is known and can just
+    -- be hard-coded in the minting policy's code:
     , addressCredential (txOutAddress txOut) == ScriptCredential validatorHash
+
+    -- Because we know the validator's hash, it can't know ours without
+    -- creating a cyclic dependency. So instead we store our symbol in
+    -- the auction state, and assert its correctness here:
+    , asMintSymbol (acState outputState) == ownSymbol
     ]
 ```
 
