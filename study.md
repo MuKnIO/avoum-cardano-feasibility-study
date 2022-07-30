@@ -705,7 +705,8 @@ txValid () input ctx =
 
             auctionOut = txInfoOutputs txInfo !! 0
             refundOut  = txInfoOutputs txInfo !! 1
-            auctionIn = txInfoInputs txInfo !! 0
+            auctionIn  = txInfoInputs txInfo !! 0
+            bidIn      = txInfoInputs txInfo !! 1
         in
         and
             [ -- Two outputs: new state and refunded old bid:
@@ -730,6 +731,9 @@ txValid () input ctx =
             -- Refunded old bid must have the right value & ownership:
             , txOutValue refundOut == asCurrentBid sIn
             , addressCredential (txOutAddress refundOut) == asCurrentBidder sIn
+
+            -- Make sure the recorded bid matches the input:
+            , txOutValue (txInInfoResolved bidIn) == asCurrentBid outS
 
             -- TODO: check that new auction state has the correct bidder?
             -- Need a convention for denoting this then.
