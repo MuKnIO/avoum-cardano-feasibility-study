@@ -919,18 +919,9 @@ be done to this document:
 
 - Finish the proof of concept section.
   - Fill in TODOs in the comments
-  - Do the rebase script
   - ...?
 - Go through and make sure we're using proper terminology; some of the
   language is borrowed from a similar study we did for Nervos, so we
   should make sure we're not using terminology that doesn't apply to
   Cardano (e.g, what does Cardano call cells?).
-- Sanity check some details:
-  - We talk of validation scripts on e.g. escrowed cells, but we may not
-    need to use separate ones; we might be able to just get away with
-    assigning them to the same credential as the auction itself.
-  - Some of the places we use `ScriptContext` in the interfaces for
-    rebase scripts probably need to use a transaction instead (TxInfo?).
-    ScriptContext includes a purpose field, which iiuc is different for
-    each script in run as part of the transaction.
 - Make sure the TOC is consistent, after the body has all been written.
