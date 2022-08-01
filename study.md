@@ -600,7 +600,25 @@ A transaction issuing a new bid comprises:
 
 - Two input cells
   - The first of which is the initial auction state
-  - The second of which is a cell constituting a new bid
+  - The second of which is a cell constituting a new bid. The value
+    of the tokens held by this cell are the bid itself.
+
+    The bid's credentials must be a validator which takes responsibility
+    for making sure:
+
+    - The bid can be spent on the auction.
+    - If the cell is spent, the resulting state has the correct value
+      for asCurrentBidder.
+
+    The auction validator checks all other invariants, but does not
+    verify the bidder credential is correct in the output state; this
+    provides the bidder with some flexibility.
+
+    In practice, the bid validator will also want to provide a way
+    for the bidder to "retract" their bid, in case it is not accepted.
+
+    We provide an example validator script that can be used for this
+    purpose.
 - Two output cells
   - The first of which is the new auction state; it should
     reflect the new highest bid (which of course must be greater
@@ -669,11 +687,14 @@ auctionPolicy ctx =
     ]
 ```
 
-<a name="Validator"></a>
-#### Validator
+<a name="Auction-Validator"></a>
+#### Auction Validator
 
-The validator is responsible for enforcing the rules of the auction once
-it has begun.
+The auction validator is responsible for enforcing the rules of the
+auction once it has begun. There is one notable omission, which is
+that when accepting a bid, the auction validator does not verify that
+the credential for the new highest bidder is correct; this is the
+responsibility of the bid validator (described below).
 
 ```haskell
 
@@ -731,13 +752,9 @@ txValid () input ctx =
             , txOutValue refundOut == asCurrentBid sIn
             , addressCredential (txOutAddress refundOut) == asCurrentBidder sIn
 
-            -- Make sure the recorded bid matches the input:
+            -- Make sure the recorded bid value matches the input. Note
+            -- that per above, we do not check the bidder credentials:
             , txOutValue (txInInfoResolved bidIn) == asCurrentBid outS
-
-            -- TODO: check that new auction state has the correct bidder?
-            -- Need a convention for denoting this then.
-            -- Or maybe just leave that to the validator for the input
-            -- bid, since this allows more flexible policy?
             ]
     txValidClose =
       let s         = acState input
@@ -758,6 +775,66 @@ txValid () input ctx =
         , addressCredential (txOutAddress bidOut) == asCurrentBidder s
         ]
 
+```
+
+<a name="Bid-Validator"></a>
+#### Bid Validator
+
+The bid validator is responsible for protecting a not-yet-accepted bid.
+Other policies are possible, but we present an example which permits
+transactions which either:
+
+- Accept the bid, moving its value to the auction cell.
+- Retract the bid, re-assigning the credential of the cell to the
+  original bidder.
+
+The datum stored in this cell is an encoding of:
+
+```haskell
+data BidState = BidState
+    { bsAuctionId :: AvoumId
+    -- ^ The id of the auction we're bidding on.
+    , bsBidder :: Credential
+    -- ^ The credential of the bidder. This is
+    -- stored in the auction state if the bid is
+    -- accepted, or placed on the output cell if
+    -- the bid is retracted.
+    }
+```
+
+The logic for the bid validator is then:
+
+```haskell
+txValid :: () -> BidState -> ScriptContext -> Bool
+txValid () bidState ctx =
+  let txInfo = scriptContextTxInfo ctx in
+  or
+    [ -- Bid accepted by auction:
+      let auctionOut = txInfoOutputs txInfo !! 0
+
+          auctionOutput :: AvoumCell AuctionState
+          auctionOutput = decode $ snd (txInfoData txInfo !! 0)
+      in
+      and
+        [ length (txInfoInputs txInfo) == 2
+        , length (txInfoOutputs txInfo) == 2
+        -- Make sure the auction script is as expected:
+        , addressCredential (txOutAddress auctionOut) == ScriptCredential validatorHash
+        -- Make sure the output bidder is what we expect:
+        , asCurrentBidder (acState auctionOutput) == bsBidder bidState
+        ]
+    , -- Bid refunded:
+      let bidOut = txInfoOutputs txInfo !! 0
+          bidIn = txInfoInputs txInfo !! 0
+      in
+      and
+        [ length (txInfoInputs txInfo) == 1
+        , length (txInfoOutputs txInfo) == 1
+        -- Make sure the value is the same, and the credential is right:
+        , txOutValue bidOut == txOutValue (txInInfoResolved bidIn)
+        , addressCredential (txOutAddress bidOut) == bsBidder bidState
+        ]
+    ]
 ```
 
 <a name="Rebase-Script"></a>
