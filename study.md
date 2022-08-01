@@ -897,6 +897,10 @@ rebase origCtx ctxById =
                 [ makeAuctionCell newOutput
                 , makeDistributeValueToCell refundValue refundCredential
                 ]
+                origValidRange
+                -- ...may need to pass some extra parameters to fill
+                -- in other metadata, but this is meant to be
+                -- illustrative
         else
             -- Closing the auction.
             makeTx
@@ -911,6 +915,8 @@ rebase origCtx ctxById =
                     (asAssets interveningState)
                     (asCurrentBidder interveningState)
                 ]
+                origValidRange
+                -- ...
 ```
 
 <a name="Bibliography"></a>
