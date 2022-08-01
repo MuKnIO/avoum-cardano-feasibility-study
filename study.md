@@ -840,6 +840,9 @@ txValid () bidState ctx =
 <a name="Rebase-Script"></a>
 #### Rebase Script
 
+The rebase script is responsible for generating a new transaction when
+a malleable transaction is invalidated.
+
 ```haskell
 rebase :: ScriptContext -> Map AvoumId ScriptContext -> ByteString
 rebase origCtx ctxById =
