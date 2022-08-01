@@ -35,7 +35,7 @@ this model.
     * [Rebase Script](#Rebase-Script)
 * [Bibliography](#Bibliography)
 * [Appendix](#Appendix)
-* [Ineffective alternatives to AVOUM](#Ineffective-alternatives-to-AVOUM)
+  * [Ineffective alternatives to AVOUM](#Ineffective-alternatives-to-AVOUM)
 
 <a name="problem"></a>
 ## The Problem
