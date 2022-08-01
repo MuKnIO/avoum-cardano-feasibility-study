@@ -36,6 +36,7 @@ this model.
 * [Bibliography](#Bibliography)
 * [Appendix](#Appendix)
   * [Ineffective alternatives to AVOUM](#Ineffective-alternatives-to-AVOUM)
+* [TODO](#TODO)
 
 <a name="problem"></a>
 ## The Problem
@@ -1004,6 +1005,7 @@ interactions even more so, and in the end doesn’t actually prevent the
 attack in the case when honest interactions themselves weren’t
 discouraged.
 
+<a href="TODO"></a>
 # TODO
 
 A (not necessarily exhaustive) list of some things that still need to
