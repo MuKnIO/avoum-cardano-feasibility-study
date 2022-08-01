@@ -682,7 +682,6 @@ txValid () input ctx =
     let deadline = asDeadline (acState cell)
         scriptContextTxInfo ctx
         validRange = txInfoValidRange (scriptContextTxInfo ctx)
-
     in
     if ivTo validRange < deadline then
         -- Before the deadline; check for a valid bid.
@@ -769,13 +768,63 @@ rebase :: ScriptContext -> Map AvoumId ScriptContext -> ByteString
 rebase origCtx ctxById =
     let origTxInfo = scriptContextTxInfo origCtx
 
-        origOutputState :: AvoumCell AuctionState
-        origOutputState = decode $ snd (txInfoData origTxInfo !! 0)
+        origOutput :: AvoumCell AuctionState
+        origOutput = decode $ snd (txInfoData origTxInfo !! 0)
+        origState = acState origOutput
 
-        interveningCtx = ctxById Map.! acId origOutputState
+        interveningCtx = ctxById Map.! acId origOutput
         interveningTxInfo = scriptContextTxInfo interveningCtx
+
+        deadline = asDeadline origState
+        interveningValidRange = txInfoValidRange interveningTxInfo
+
+        origValidRange = txInfoValidRange origTxInfo
     in
-    error "TODO"
+    if ivTo interveningValidRange >= deadline then
+        error "intervening transaction closed the auction; can't rebase."
+    else
+        -- Placing a bid.
+        let interveningOuptut :: AvoumCell AuctionState
+            interveningOuptut = decode $ snd (txInfoData  interveningTxInfo !! 0)
+            interveningState = acState interveningOutput
+        in
+        if ivTo origValidRange < deadline then
+            let refundValue = asCurrentBid interveningState
+                refundCredential = asCurrentBidder interveningState
+
+                newState = interveningState
+                    { asCurrentBid = asCurrentBid origState
+                    , asCurrentBidder = asCurrentBidder origState
+                    }
+
+                newOutput = AvoumCell
+                    { acId = acId origOutput
+                    , acState = newState
+                    }
+            in
+            makeTx
+                -- inputs:
+                [ copyOutputToInput interveningTxInfo 0
+                , copyInputCell origTxInfo 1
+                ]
+                -- outputs:
+                [ makeAuctionCell newOutput
+                , makeDistributeValueToCell refundValue refundCredential
+                ]
+        else
+            -- Closing the auction.
+            makeTx
+                -- inputs:
+                [ copyOutputToInput interveningTxInfo 0
+                ]
+                -- outputs:
+                [ makeDistributeValueToCell
+                    (asCurrentBid interveningState)
+                    (asSeller interveningState)
+                , makeDistributeValueToCell
+                    (asAssets interveningState)
+                    (asCurrentBidder interveningState)
+                ]
 ```
 
 <a name="Bibliography"></a>
