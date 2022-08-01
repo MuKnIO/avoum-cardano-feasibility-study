@@ -27,6 +27,12 @@ this model.
     * [Malleable Transaction Submission API](#Malleable-Transaction-Submission-API)
     * [Rebase Script Execution Environment](#Rebase-Script-Execution-Environment)
   * [Proof of Concept](#Proof-of-Concept)
+    * [Auction State](#Auction-State)
+    * [Transaction Format](#Transaction-Format)
+    * [Minting Policy](#Minting-Policy)
+    * [Auction Validator](#Auction-Validator)
+    * [Bid Validator](#Bid-Validator)
+    * [Rebase Script](#Rebase-Script)
 * [Bibliography](#Bibliography)
 * [Appendix](#Appendix)
 * [Ineffective alternatives to AVOUM](#Ineffective-alternatives-to-AVOUM)
@@ -1004,4 +1010,3 @@ be done to this document:
   language is borrowed from a similar study we did for Nervos, so we
   should make sure we're not using terminology that doesn't apply to
   Cardano (e.g, what does Cardano call cells?).
-- Make sure the TOC is consistent, after the body has all been written.
