@@ -370,9 +370,9 @@ To summarize the study's findings:
 - No modifications are needed to the transaction format or to the
   validation process to support malleable transactions.
 - To support "account view" semantics, we will need a convention
-  for assigning a persistent identifier to "the same" cell across
+  for assigning a persistent identifier to "the same" account across
   transactions; we describe a scheme to use for this purpose. We call
-  these persistent identifiers "account ids," and the chains of cells
+  these persistent identifiers "account ids," and the chains of UTxOs
   that they identify are "accounts."
 - To support malleable transactions, we will need to supply the Cardano
   node  with an additional script, beyond the usual validation scripts,
@@ -406,9 +406,9 @@ To summarize the study's findings:
   by design, and inputs which require a signature also defeat
   malleability.  For users holding assets protected by one of these
   conventional mechanisms, using malleable transactions thus requires an extra
-  step: first, cells compatible with malleability are created in a regular
-  non-malleable transaction. Only then can these cells be assembled into
-  malleable transactions.
+  step: first, UTxOs compatible with malleability are created in a
+  regular non-malleable transaction. Only then can these UTxOs be
+  assembled into malleable transactions.
 
 <a name="Protocol-and-Interface-Modifications"></a>
 ### Protocol and Interface Modifications
@@ -440,7 +440,7 @@ data MalleableTx = MalleableTx
 #### Rebase Script Execution Environment
 
 The rebase script is run when a malleable transaction specifies input
-cells which:
+UTxOs which:
 
 - Have been consumed by another transaction, and
 - Were marked as an account when the transaction was submitted to the
@@ -459,21 +459,21 @@ First, we define data types used for identifying an account:
 -- | An account id. This consists of a currency symbol and an arbitrary
 -- ByteString, which the minting policy for the currency must ensure
 -- is unique for all accounts which hold that currency (perhaps with the
--- help of trusted validator scripts on issued cells).
+-- help of trusted validator scripts on issued UTxOs).
 --
--- Rebasing miners must ensure that any cells they treat as accounts hold
--- a non-zero balance of the specified currency. Rebasing miners may
--- assume that this uniquely identifies an account for indexing
--- purposes; if the currency's minting policy fails to ensure this
--- the node will not suffer negative consequences, but cells whose ids
--- collide may spurriously replace one another in the index, possibly
--- causing rebase scripts to fail.
+-- Rebasing miners must ensure that any UTxOs they treat as part of an
+-- account holds a non-zero balance of the specified currency. Rebasing
+-- miners may assume that 'AvoumId' uniquely identifies an account for
+-- indexing purposes; if the currency's minting policy fails to ensure
+-- this, the node will not suffer negative consequences, but accounts
+-- whose ids collide may spurriously replace one another in the index,
+-- possibly causing rebase scripts to fail.
 newtype AvoumId = AvoumId
     { aidSymbol :: CurrencySymbol
     , aidUnique :: ByteString
     }
 
--- | The state of a cell that represents an account. The @acId@ field is
+-- | The datum of a UTxO that represents an account. The @acId@ field is
 -- understood by rebasing miners and used for indexing purposes. The @acState@
 -- field is treated as opaque by the miner, and available for use by the
 -- contract itself.
@@ -513,7 +513,7 @@ implementation, but are sufficient to illustrate the design.
 We include Haskell-inspired pseudocode for a validator, minting policy
 and rebase script for the auction, as well as validation scripts
 suitable for bids & assets. The auction uses a minting policy to ensure
-that cells in invalid states cannot be constructed.
+that UTxOs in invalid states cannot be constructed.
 
 When it comes time to first implement this proof of concept,
 as an incremental step we may hard-code the rebase logic for this particular
@@ -550,12 +550,12 @@ data AuctionState = AuctionState
     }
 ```
 
-For an `AvoumCell AuctionState` to be valid, its cell must hold
+For an `AvoumCell AuctionState` to be valid, its UTxO must hold
 tokens equal to the sum of:
 
 - the current bid (`asCurrentBid`),
 - the assets being sold (`asAssets`),
-- ...and a balance of 1 token of the currency identified in the cell's
+- ...and a balance of 1 token of the currency identified in the UTxO's
   `aidSymbol` field of its account id.
 
 This invariant is enforced by the minting policy when issuing the token
@@ -573,9 +573,9 @@ valueStateConsistent txOut state =
     , auctionMarkerValue (asMintSymbol state)
     ]
 
--- | Value whose presence indicates taht this is an auction cell; the
+-- | Value whose presence indicates that this is an auction account; the
 -- miniting policy for the passed CurrencySymbol must enforce that only
--- auction state cells can hold this.
+-- auction state UTxOs can hold this.
 auctionMarkerValue :: CurrencySymbol -> Value
 auctionMarkerValue mintSym =
     -- XXX/TODO: It is unclear to me why the map is nested here, and
@@ -596,7 +596,7 @@ There are three types of transactions that can involve an auction:
 
 Opening the auction is handled by the minting policy; the transaction
 should have one input, which is the assets being sold, and one output
-which is the auction cell.
+which is the auction account.
 
 The other two transaction types are handled by the validator. The
 validator can distinguish them based on their valid time range;
@@ -605,17 +605,17 @@ must be valid only after the deadline.
 
 A transaction issuing a new bid comprises:
 
-- Two input cells
+- Two input UTxOs:
   - The first of which is the initial auction state
-  - The second of which is a cell constituting a new bid. The value
-    of the tokens held by this cell are the bid itself.
+  - The second of which is a UTxO constituting a new bid. The value
+    of the tokens held by this UTxO are the bid itself.
 
     The bid's credentials must be a validator which takes responsibility
     for making sure:
 
     - The bid can be spent on the auction.
-    - If the cell is spent, the resulting state has the correct value
-      for asCurrentBidder.
+    - If the bid is spent on the auction, the resulting state has the
+      correct value for asCurrentBidder.
 
     The auction validator checks all other invariants, but does not
     verify the bidder credential is correct in the output state; this
@@ -626,7 +626,7 @@ A transaction issuing a new bid comprises:
 
     We provide an example validator script that can be used for this
     purpose.
-- Two output cells
+- Two output UTxOs:
   - The first of which is the new auction state; it should
     reflect the new highest bid (which of course must be greater
     than the old one).
@@ -636,8 +636,8 @@ A transaction issuing a new bid comprises:
 
 A transaction closing the auction comprises:
 
-- One input cell, the auction state.
-- Two output cells
+- One input UTxO, the auction state.
+- Two output UTxOs
   - The first of which is the assets being sold, which should have the
     credential specified for the current bidder in the input state.
   - The second of which is the highest bid, and should have the
@@ -660,7 +660,7 @@ auctionPolicy ctx =
   let ownSymbol = ownCurrencySymbol ctx
       txInfo    = scriptContextTxInfo ctx
 
-      -- State assigned to the newly minted cell.
+      -- State assigned to the newly minted UTxO
       outputState :: AvoumCell AuctionState
       outputState = decode $ snd (txInfoData txInfo !! 0)
 
@@ -707,7 +707,7 @@ responsibility of the bid validator (described below).
 
 txValid :: () -> AvoumCell AuctionState -> ScriptContext -> Bool
 txValid () input ctx =
-    let deadline = asDeadline (acState cell)
+    let deadline = asDeadline (acState input)
         scriptContextTxInfo ctx
         validRange = txInfoValidRange (scriptContextTxInfo ctx)
     in
@@ -742,8 +742,8 @@ txValid () input ctx =
             , length (txInfoInputs txInfo) == 2
 
             -- This script should be invoked in order to spend input
-            -- cell 0. This is important when we check for consistency
-            -- between that cell and the new one:
+            -- UTxO 0. This is important when we check for consistency
+            -- between that UTxO and the new one:
             , scriptContextPurpose ctx == Spending (txInInfoOutRef auctionIn)
 
             -- Validity checks for new auction state:
@@ -770,7 +770,7 @@ txValid () input ctx =
           bidOut    = txInfoOutputs txInfo !! 1
       in
       and
-        [ -- Should output two cells, one for the assets being
+        [ -- Should output two UTxOs, one for the assets being
           -- sold, and one for the bid being accepted:
           length (txInfoOutputs txInfo) == 2
 
@@ -791,11 +791,11 @@ The bid validator is responsible for protecting a not-yet-accepted bid.
 Other policies are possible, but we present an example which permits
 transactions which either:
 
-- Accept the bid, moving its value to the auction cell.
-- Retract the bid, re-assigning the credential of the cell to the
+- Accept the bid, moving its value to the auction account.
+- Retract the bid, re-assigning the credential of the UTxO to the
   original bidder.
 
-The datum stored in this cell is an encoding of:
+The datum stored in this UTxO is an encoding of:
 
 ```haskell
 data BidState = BidState
@@ -804,7 +804,7 @@ data BidState = BidState
     , bsBidder :: Credential
     -- ^ The credential of the bidder. This is
     -- stored in the auction state if the bid is
-    -- accepted, or placed on the output cell if
+    -- accepted, or placed on the output UTxO if
     -- the bid is retracted.
     }
 ```
@@ -1014,7 +1014,3 @@ be done to this document:
 - Finish the proof of concept section.
   - Fill in TODOs in the comments
   - ...?
-- Go through and make sure we're using proper terminology; some of the
-  language is borrowed from a similar study we did for Nervos, so we
-  should make sure we're not using terminology that doesn't apply to
-  Cardano (e.g, what does Cardano call cells?).
