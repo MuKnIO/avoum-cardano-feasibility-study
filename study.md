@@ -578,10 +578,8 @@ valueStateConsistent txOut state =
 -- auction state UTxOs can hold this.
 auctionMarkerValue :: CurrencySymbol -> Value
 auctionMarkerValue mintSym =
-    -- XXX/TODO: It is unclear to me why the map is nested here, and
-    -- what the role of TokenName is. Maybe it's a namespacing mechanism
-    -- so that a single minting policy can mint different tokens? Need
-    -- to investigate further.
+    -- We use the fixed token name "auction"; the contract doesn't
+    -- need multiple token types, so we can pick whatever we want here.
     Value $ Map.singleton mintSym (Map.singleton "auction" 1)
 ```
 
@@ -1004,13 +1002,3 @@ fee only discourages attacks inasmuch as it discourages honest
 interactions even more so, and in the end doesn’t actually prevent the
 attack in the case when honest interactions themselves weren’t
 discouraged.
-
-<a href="TODO"></a>
-# TODO
-
-A (not necessarily exhaustive) list of some things that still need to
-be done to this document:
-
-- Finish the proof of concept section.
-  - Fill in TODOs in the comments
-  - ...?
