@@ -36,7 +36,6 @@ this model.
 * [Bibliography](#Bibliography)
 * [Appendix](#Appendix)
   * [Ineffective alternatives to AVOUM](#Ineffective-alternatives-to-AVOUM)
-* [TODO](#TODO)
 
 <a name="problem"></a>
 ## The Problem
